@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.log
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Database & User Data (CRITICAL - DO NOT PUSH)
+*.db
+*.sqlite
+*.sqlite3
+smartvellore.db
+
+# User Uploads (CRITICAL - DO NOT PUSH)
+uploads/
+backend/uploads/
+
+# Environment Variables (CRITICAL - DO NOT PUSH)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.backup
+*.bak
+*.old
+*.old2
+*.orig
+
+# Temporary documentation
+INTEGRATION_GUIDE.md
+QUICK_START.md
+README_INTEGRATION.md

@@ -13,3 +13,13 @@ class Issue(Base):
     longitude = Column(Float)
     status = Column(String, default="OPEN")
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Admin(Base):
+    __tablename__ = "admins"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
