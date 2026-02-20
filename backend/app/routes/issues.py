@@ -23,6 +23,8 @@ def get_all_issues(db: Session = Depends(get_db)):
 @router.post("")
 def create_issue(
     title: str = Form(...),
+    email: str = Form(...),
+    department: str = Form(...),
     description: str = Form(...),
     latitude: float = Form(...),
     longitude: float = Form(...),
@@ -39,6 +41,8 @@ def create_issue(
 
     new_issue = models.Issue(
         title=title,
+        email=email,
+        department=department,
         description=description,
         latitude=latitude,
         longitude=longitude,

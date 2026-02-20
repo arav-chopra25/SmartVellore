@@ -7,6 +7,8 @@ class Issue(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String)
+    email = Column(String)
+    department = Column(String)
     description = Column(String)
     image_path = Column(String)
     latitude = Column(Float)

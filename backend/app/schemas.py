@@ -5,6 +5,7 @@ from datetime import datetime
 
 class IssueCreate(BaseModel):
     title: str
+    email: str
     description: str
     latitude: float
     longitude: float
@@ -13,6 +14,8 @@ class IssueCreate(BaseModel):
 class IssueResponse(BaseModel):
     id: int
     title: str
+    email: Optional[str] = None
+    department: Optional[str] = None
     description: str
     latitude: float
     longitude: float

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import exifr from 'exifr';
 import { 
   MapPin, 
   AlertCircle, 
@@ -28,6 +29,14 @@ const ISSUE_STATUS = {
   IN_PROGRESS: { label: 'In Progress', color: 'bg-amber-100 text-amber-700 border-amber-200' },
   RESOLVED: { label: 'Resolved', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
 };
+
+const DEPARTMENTS = [
+  'Water Supply Department',
+  'Public Works Department',
+  'Electricity Department',
+  'Solid Waste Management',
+  'Traffic Department'
+];
 
 // --- GEMINI API INTEGRATION ---
 const apiKey = "";
@@ -224,9 +233,6 @@ const Navbar = ({ setView, view, isAdmin, handleLogout }) => (
 const UserView = ({
   formData,
   setFormData,
-  searchAddress,
-  addressSuggestions,
-  selectSuggestion,
   handleReportSubmit,
   issues,
   isAILoading,
@@ -236,6 +242,38 @@ const UserView = ({
   apiKey
 }) => {
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+  const [geoTagMessage, setGeoTagMessage] = useState('Upload a geotagged photo to auto-detect location.');
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const extractGeoTag = async (file) => {
+    try {
+      const exifData = await exifr.parse(file, { gps: true });
+      const latitude = exifData?.latitude;
+      const longitude = exifData?.longitude;
+
+      if (typeof latitude === 'number' && typeof longitude === 'number') {
+        const detectedLocation = [latitude, longitude];
+        setFormData(prev => ({
+          ...prev,
+          image: file,
+          location: detectedLocation,
+          geoTagged: true,
+          addressSearch: `Detected from photo: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+        }));
+        setGeoTagMessage(`Location auto-detected: ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
+        return true;
+      }
+    } catch (error) {
+      console.warn('EXIF read failed:', error);
+    }
+
+    setFormData(prev => ({ ...prev, image: file, geoTagged: false }));
+    setGeoTagMessage('No geotag found in this photo. Please upload a geotagged photo.');
+    return false;
+  };
 
   useEffect(() => {
     if (!formData.image) {
@@ -248,16 +286,91 @@ const UserView = ({
     return () => URL.revokeObjectURL(url);
   }, [formData.image]);
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files && event.target.files[0];
     if (file) {
-      setFormData(prev => ({ ...prev, image: file }));
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      setIsCameraOn(false);
+      await extractGeoTag(file);
     }
   };
 
-  const clearPhoto = () => {
-    setFormData(prev => ({ ...prev, image: null }));
+  const startCamera = async () => {
+    setCameraError('');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraError('Camera is not supported in this browser. Please use Upload Photo.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      setIsCameraOn(true);
+    } catch (error) {
+      setCameraError('Unable to access camera. Please allow permission or use Upload Photo.');
+    }
   };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraOn(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      setFormData(prev => ({
+        ...prev,
+        image: file,
+        geoTagged: false,
+        addressSearch: ''
+      }));
+      setGeoTagMessage('Captured image usually has no GPS geotag in browser camera mode. Upload a geotagged photo from device gallery.');
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  };
+
+  const clearPhoto = () => {
+    setFormData(prev => ({
+      ...prev,
+      image: null,
+      geoTagged: false,
+      location: VELLORE_CENTER,
+      addressSearch: ''
+    }));
+    setGeoTagMessage('Upload a geotagged photo to auto-detect location.');
+  };
+
+  useEffect(() => () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isCameraOn || !videoRef.current || !streamRef.current) return;
+    videoRef.current.srcObject = streamRef.current;
+    videoRef.current.play().catch(() => {
+      setCameraError('Camera preview could not start. Please try again.');
+    });
+  }, [isCameraOn]);
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-10 grid grid-cols-1 lg:grid-cols-12 gap-10">
@@ -295,6 +408,33 @@ const UserView = ({
             </div>
 
             <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Email ID</label>
+              <input
+                type="email"
+                placeholder="yourname@example.com"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all text-sm font-medium"
+                value={formData.email}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Department</label>
+              <select
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all text-sm font-medium"
+                value={formData.department}
+                onChange={e => setFormData({ ...formData, department: e.target.value })}
+                disabled={isSubmitting}
+              >
+                <option value="">Select department</option>
+                {DEPARTMENTS.map((department) => (
+                  <option key={department} value={department}>{department}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Description</label>
               <textarea 
                 rows="3"
@@ -306,38 +446,12 @@ const UserView = ({
               ></textarea>
             </div>
 
-            <div className="space-y-2 relative">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Search Location</label>
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
-                <input 
-                  type="text" 
-                  placeholder="Street or area name..."
-                  className="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all text-sm font-medium"
-                  value={formData.addressSearch}
-                  onChange={e => {
-                    setFormData({...formData, addressSearch: e.target.value});
-                    searchAddress(e.target.value);
-                  }}
-                  disabled={isSubmitting}
-                />
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Detected Location</label>
+              <div className="w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-600 flex items-center gap-2">
+                <Search size={14} className="text-blue-500" />
+                {formData.geoTagged ? formData.addressSearch : 'Location will be auto-detected from photo geotag'}
               </div>
-
-              {addressSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 shadow-2xl rounded-2xl mt-2 z-[2000] overflow-hidden">
-                  {addressSuggestions.map((sug, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => selectSuggestion(sug)}
-                      className="w-full text-left px-5 py-3.5 text-xs font-semibold hover:bg-blue-50 border-b last:border-0 border-slate-50 flex items-start gap-3 transition-colors"
-                    >
-                      <MapPin size={14} className="text-blue-500 mt-0.5 shrink-0" />
-                      <span className="text-slate-600 line-clamp-1">{sug.display_name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="space-y-3">
@@ -353,6 +467,35 @@ const UserView = ({
                     className="hidden"
                   />
                 </label>
+                {!isCameraOn ? (
+                  <button
+                    type="button"
+                    onClick={startCamera}
+                    disabled={isSubmitting}
+                    className="px-4 py-2 rounded-xl bg-slate-700 text-white font-bold text-xs hover:bg-slate-800 transition-colors disabled:opacity-60"
+                  >
+                    Open Camera
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                    >
+                      Capture Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors disabled:opacity-60"
+                    >
+                      Stop Camera
+                    </button>
+                  </>
+                )}
                 {formData.image && (
                   <button
                     type="button"
@@ -364,6 +507,26 @@ const UserView = ({
                   </button>
                 )}
               </div>
+
+              {cameraError && (
+                <p className="text-xs font-bold text-red-500">{cameraError}</p>
+              )}
+
+              <p className={`text-xs font-bold ${formData.geoTagged ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {geoTagMessage}
+              </p>
+
+              {isCameraOn && (
+                <div className="rounded-[1.25rem] border border-slate-200 overflow-hidden bg-slate-900">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-52 object-cover"
+                  />
+                </div>
+              )}
 
               {photoPreview && (
                 <div className="rounded-[1.25rem] border border-slate-200 overflow-hidden">
@@ -379,10 +542,10 @@ const UserView = ({
             <div className="h-56 rounded-[1.5rem] border border-slate-200 overflow-hidden relative shadow-inner">
               <LeafletMap 
                 location={formData.location} 
-                onLocationSelect={(loc) => setFormData({...formData, location: loc})} 
+                readOnly={true}
               />
               <div className="absolute bottom-4 right-4 z-[1000] bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-blue-600 shadow-lg">
-                Pin at {formData.location[0].toFixed(3)}, {formData.location[1].toFixed(3)}
+                {formData.geoTagged ? `Pin from geotag: ${formData.location[0].toFixed(3)}, ${formData.location[1].toFixed(3)}` : 'Waiting for geotagged photo'}
               </div>
             </div>
 
@@ -438,6 +601,11 @@ const UserView = ({
                     <h3 className="font-extrabold text-slate-800 text-lg group-hover:text-blue-600 transition-colors truncate pr-4">{issue.title}</h3>
                     <StatusBadge status={issue.status} />
                   </div>
+                  {issue.department && (
+                    <div className="inline-flex mb-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                      {issue.department}
+                    </div>
+                  )}
                   <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-4">{issue.description}</p>
                   <div className="flex flex-wrap items-center gap-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     <span className="flex items-center gap-1.5">
@@ -583,6 +751,11 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
               <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Report ID #{issue.id}</span>
             </div>
             <h2 className="text-3xl font-black text-slate-800 leading-tight mb-2">{issue.title}</h2>
+            {issue.department && (
+              <div className="inline-flex mb-3 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-wider">
+                {issue.department}
+              </div>
+            )}
             <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400">
               <div className="flex items-center gap-1.5">
                 <Calendar size={14} className="text-blue-500" />
@@ -596,6 +769,15 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
           </header>
 
           <div className="space-y-6">
+            {issue.email && (
+              <div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Reporter Email</h4>
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 text-sm font-semibold break-all">
+                  {issue.email}
+                </div>
+              </div>
+            )}
+
             <div>
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Citizen Description</h4>
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
@@ -777,10 +959,13 @@ export default function App() {
   
   const [formData, setFormData] = useState({
     title: '',
+    email: '',
+    department: '',
     description: '',
     location: VELLORE_CENTER,
     addressSearch: '',
-    image: null
+    image: null,
+    geoTagged: false
   });
   const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [notification, setNotification] = useState(null);
@@ -874,8 +1059,24 @@ export default function App() {
 
   const handleReportSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.description) {
-      showNotification('Title and Description are required', 'error');
+    if (!formData.title || !formData.email || !formData.department || !formData.description) {
+      showNotification('Title, Email, Department and Description are required', 'error');
+      return;
+    }
+
+    if (!formData.image) {
+      showNotification('Please upload a photo to detect location', 'error');
+      return;
+    }
+
+    if (!formData.geoTagged) {
+      showNotification('Photo geotag location not found. Upload a geotagged photo.', 'error');
+      return;
+    }
+
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email);
+    if (!isValidEmail) {
+      showNotification('Please enter a valid email address', 'error');
       return;
     }
 
@@ -884,6 +1085,8 @@ export default function App() {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('title', formData.title);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('department', formData.department);
       formDataToSend.append('description', formData.description);
       formDataToSend.append('latitude', formData.location[0]);
       formDataToSend.append('longitude', formData.location[1]);
@@ -895,7 +1098,7 @@ export default function App() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      setFormData({ title: '', description: '', location: VELLORE_CENTER, addressSearch: '', image: null });
+      setFormData({ title: '', email: '', department: '', description: '', location: VELLORE_CENTER, addressSearch: '', image: null, geoTagged: false });
       showNotification('Issue reported successfully!', 'success');
       fetchIssues();
     } catch (err) {
