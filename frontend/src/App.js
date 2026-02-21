@@ -17,7 +17,13 @@ import {
   X,
   Calendar,
   Maximize2,
-  Trash2
+  Trash2,
+  Building2,
+  Droplets,
+  Zap,
+  Car,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 
 // --- CONSTANTS ---
@@ -37,6 +43,20 @@ const DEPARTMENTS = [
   'Solid Waste Management',
   'Traffic Department'
 ];
+
+const DEPARTMENT_PORTALS = [
+  { id: 'water', username: 'water', password: '123', name: 'Water Supply Department', icon: Droplets, color: 'text-blue-500', bg: 'bg-blue-50' },
+  { id: 'pwd', username: 'pwd', password: '123', name: 'Public Works Department', icon: Building2, color: 'text-orange-500', bg: 'bg-orange-50' },
+  { id: 'electricity', username: 'electricity', password: '123', name: 'Electricity Department', icon: Zap, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+  { id: 'waste', username: 'waste', password: '123', name: 'Solid Waste Management', icon: Trash2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  { id: 'traffic', username: 'traffic', password: '123', name: 'Traffic Department', icon: Car, color: 'text-purple-500', bg: 'bg-purple-50' }
+];
+
+const SORT_OPTIONS = {
+  NEWEST: 'NEWEST',
+  OLDEST: 'OLDEST',
+  PRIORITY: 'PRIORITY'
+};
 
 // --- GEMINI API INTEGRATION ---
 const apiKey = "";
@@ -71,6 +91,34 @@ const callGemini = async (prompt, retries = 5, delay = 1000) => {
   }
 };
 
+// --- HELPER FUNCTIONS ---
+const generateReportId = (issueId) => {
+  if (!issueId) return 'VLR-00000000';
+  return `VLR-${String(issueId).padStart(8, '0')}`;
+};
+
+const generateGroupId = (issueId) => {
+  if (!issueId) return 'CLT-00000000';
+  return `CLT-${String(issueId).padStart(8, '0')}`;
+};
+
+const convertLegacyGroupId = (groupId, fallbackId) => {
+  // Convert old RPT- format to new CLT- format
+  if (groupId && groupId.startsWith('RPT-')) {
+    const idNumber = groupId.substring(4); // Extract the number part
+    return generateGroupId(parseInt(idNumber, 10));
+  }
+  return groupId;
+};
+
+const getDisplayId = (groupId, fallbackId) => {
+  // If groupId exists (CLT- for grouped reports), use it
+  const convertedId = convertLegacyGroupId(groupId, fallbackId);
+  if (convertedId) return convertedId;
+  // Otherwise, use VLR- for single reports
+  return generateReportId(fallbackId);
+};
+
 // --- HELPER COMPONENTS ---
 
 const StatusBadge = ({ status }) => {
@@ -81,6 +129,51 @@ const StatusBadge = ({ status }) => {
     </span>
   );
 };
+
+const IssueFilters = ({
+  filterStatus,
+  setFilterStatus,
+  filterDepartment,
+  setFilterDepartment,
+  sortOption,
+  setSortOption
+}) => (
+  <div className="bg-white border border-slate-100 rounded-2xl p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between shadow-sm">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+      <select
+        value={filterStatus}
+        onChange={(e) => setFilterStatus(e.target.value)}
+        className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-600 outline-none focus:ring-4 focus:ring-blue-500/10"
+      >
+        <option value="ALL">All Status</option>
+        <option value="OPEN">Open</option>
+        <option value="IN_PROGRESS">In Progress</option>
+        <option value="RESOLVED">Resolved</option>
+      </select>
+
+      <select
+        value={filterDepartment}
+        onChange={(e) => setFilterDepartment(e.target.value)}
+        className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-600 outline-none focus:ring-4 focus:ring-blue-500/10"
+      >
+        <option value="ALL">All Departments</option>
+        {DEPARTMENTS.map((department) => (
+          <option key={department} value={department}>{department}</option>
+        ))}
+      </select>
+
+      <select
+        value={sortOption}
+        onChange={(e) => setSortOption(e.target.value)}
+        className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-bold text-slate-600 outline-none focus:ring-4 focus:ring-blue-500/10"
+      >
+        <option value={SORT_OPTIONS.NEWEST}>Newest First</option>
+        <option value={SORT_OPTIONS.OLDEST}>Oldest First</option>
+        <option value={SORT_OPTIONS.PRIORITY}>Priority Based</option>
+      </select>
+    </div>
+  </div>
+);
 
 // Custom Map Component using global L (Leaflet)
 const LeafletMap = ({ location, onLocationSelect, readOnly = false }) => {
@@ -196,7 +289,7 @@ const LeafletMap = ({ location, onLocationSelect, readOnly = false }) => {
 
 // --- VIEW COMPONENTS ---
 
-const Navbar = ({ setView, view, isAdmin, handleLogout }) => (
+const Navbar = ({ setView, view, authType, handleLogout }) => (
   <nav className="bg-white border-b border-gray-100 sticky top-0 z-[1000] px-6 py-4 flex items-center justify-between shadow-sm">
     <div className="flex items-center gap-3 cursor-pointer" onClick={() => setView('user')}>
       <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-100">
@@ -210,14 +303,22 @@ const Navbar = ({ setView, view, isAdmin, handleLogout }) => (
 
     <div className="flex items-center gap-4">
       {view === 'user' && (
-        <button 
-          onClick={() => setView('login')}
-          className="text-sm font-bold text-slate-600 hover:text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100"
-        >
-          Admin Access
-        </button>
+        <>
+          <button 
+            onClick={() => setView('dept-select')}
+            className="text-sm font-bold text-slate-600 hover:text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100"
+          >
+            Department Access
+          </button>
+          <button 
+            onClick={() => setView('login')}
+            className="text-sm font-bold text-slate-600 hover:text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-50 transition-all border border-transparent hover:border-blue-100"
+          >
+            Admin Access
+          </button>
+        </>
       )}
-      {(view === 'admin' || isAdmin) && (
+      {authType && (
         <button 
           onClick={handleLogout}
           className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-red-600 px-4 py-2 rounded-xl hover:bg-red-50 transition-all"
@@ -230,11 +331,118 @@ const Navbar = ({ setView, view, isAdmin, handleLogout }) => (
   </nav>
 );
 
+const DepartmentSelectView = ({ onSelect, setView }) => (
+  <div className="min-h-[calc(100vh-80px)] bg-slate-50/50 p-6 flex flex-col items-center justify-center">
+    <div className="max-w-5xl w-full">
+      <h2 className="text-4xl font-black text-slate-800 text-center mb-2">Department Access</h2>
+      <p className="text-slate-500 text-center mb-10 font-medium">Select your department to manage assigned issues.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {DEPARTMENT_PORTALS.map((department) => {
+          const Icon = department.icon;
+          return (
+            <button
+              key={department.id}
+              onClick={() => onSelect(department)}
+              className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all flex flex-col items-center group"
+            >
+              <div className={`p-5 rounded-3xl mb-6 ${department.bg} ${department.color} group-hover:scale-110 transition-transform`}>
+                <Icon size={30} />
+              </div>
+              <span className="font-black text-slate-800 text-center text-sm">{department.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="text-center mt-8">
+        <button
+          type="button"
+          onClick={() => setView('user')}
+          className="text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const DepartmentLoginView = ({ currentDept, deptLoginData, setDeptLoginData, deptLoginError, handleDeptLogin, setView, isLoading }) => {
+  if (!currentDept) return null;
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 bg-slate-50/50">
+      <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl overflow-hidden border border-white">
+        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-12 text-white text-center">
+          <div className="bg-white/20 backdrop-blur-md w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+            <Building2 size={40} />
+          </div>
+          <h2 className="text-2xl font-black">{currentDept.name}</h2>
+          <p className="text-slate-300 text-xs mt-2 font-bold uppercase tracking-widest">Department Staff Portal</p>
+        </div>
+
+        <form onSubmit={handleDeptLogin} className="p-10 space-y-6">
+          {deptLoginError && (
+            <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-3">
+              <AlertCircle size={16} />
+              {deptLoginError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Department ID</label>
+            <input
+              type="text"
+              className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700"
+              value={deptLoginData.username}
+              onChange={e => setDeptLoginData({ ...deptLoginData, username: e.target.value })}
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Access Key</label>
+            <input
+              type="password"
+              className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700"
+              value={deptLoginData.password}
+              onChange={e => setDeptLoginData({ ...deptLoginData, password: e.target.value })}
+              disabled={isLoading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-slate-800 hover:bg-slate-700 disabled:bg-slate-400 text-white font-black py-5 rounded-2xl shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]"
+          >
+            {isLoading ? 'Authenticating...' : 'Authenticate'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setView('dept-select')}
+            className="w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
+          >
+            Change Department
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const UserView = ({
   formData,
   setFormData,
   handleReportSubmit,
   issues,
+  onIssueClick,
+  filterStatus,
+  setFilterStatus,
+  filterDepartment,
+  setFilterDepartment,
+  sortOption,
+  setSortOption,
   isAILoading,
   handleAIRefine,
   isSubmitting,
@@ -573,6 +781,15 @@ const UserView = ({
           </div>
         </div>
 
+        <IssueFilters
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterDepartment={filterDepartment}
+          setFilterDepartment={setFilterDepartment}
+          sortOption={sortOption}
+          setSortOption={setSortOption}
+        />
+
         <div className="space-y-4 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
           {isLoading ? (
             <div className="flex items-center justify-center h-40">
@@ -587,7 +804,7 @@ const UserView = ({
             </div>
           ) : (
             issues.map(issue => (
-              <div key={issue.id} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group flex flex-col md:flex-row gap-6">
+              <div key={issue.report_group_id || issue.id} onClick={() => onIssueClick(issue)} className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group flex flex-col md:flex-row gap-6 cursor-pointer">
                 <div className="w-full md:w-32 h-32 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-50">
                   <img 
                     src={issue.image_path ? `${API_BASE}/${issue.image_path}` : 'https://images.unsplash.com/photo-1599411516024-420658f84439?auto=format&fit=crop&q=80&w=400'} 
@@ -600,6 +817,16 @@ const UserView = ({
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-extrabold text-slate-800 text-lg group-hover:text-blue-600 transition-colors truncate pr-4">{issue.title}</h3>
                     <StatusBadge status={issue.status} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                      {getDisplayId(issue.report_group_id, issue.id)}
+                    </span>
+                    {(issue.reportCount || 1) > 1 && (
+                      <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">
+                        {issue.reportCount} Reports
+                      </span>
+                    )}
                   </div>
                   {issue.department && (
                     <div className="inline-flex mb-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
@@ -690,21 +917,36 @@ const LoginView = ({ handleLogin, loginData, setLoginData, loginError, setView, 
   </div>
 );
 
-const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) => {
+const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUserType, issueUpdates, onAddUpdate }) => {
+  const [newUpdateText, setNewUpdateText] = useState('');
+  const [selectedReportId, setSelectedReportId] = useState(null);
+
+  useEffect(() => {
+    if (issue && issue.groupedReports && issue.groupedReports.length > 0) {
+      setSelectedReportId(issue.groupedReports[0].id);
+    } else if (issue) {
+      setSelectedReportId(issue.id);
+    }
+  }, [issue]);
+
   if (!issue) return null;
 
-  const dateStr = new Date(issue.created_at || issue.timestamp).toLocaleDateString('en-IN', {
+  const groupedReports = (issue.groupedReports && issue.groupedReports.length > 0) ? issue.groupedReports : [issue];
+
+  const primaryIssue = groupedReports.find((report) => report.id === selectedReportId) || groupedReports[0];
+
+  const dateStr = new Date(primaryIssue.created_at || primaryIssue.timestamp).toLocaleDateString('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
   
-  const timeStr = new Date(issue.created_at || issue.timestamp).toLocaleTimeString('en-IN', {
+  const timeStr = new Date(primaryIssue.created_at || primaryIssue.timestamp).toLocaleTimeString('en-IN', {
     hour: '2-digit',
     minute: '2-digit'
   });
 
-  const imageUrl = issue.image_path ? `${API_BASE}/${issue.image_path}` : issue.image;
+  const imageUrl = primaryIssue.image_path ? `${API_BASE}/${primaryIssue.image_path}` : primaryIssue.image;
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 md:p-6">
@@ -738,7 +980,7 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
             </div>
             <div className="mt-4 flex items-center justify-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white border border-slate-100 py-2 rounded-xl">
               <Navigation size={12} className="text-blue-500" />
-              {issue.latitude.toFixed(5)}, {issue.longitude.toFixed(5)}
+              {primaryIssue.latitude.toFixed(5)}, {primaryIssue.longitude.toFixed(5)}
             </div>
           </div>
         </div>
@@ -747,13 +989,15 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
         <div className="w-full md:w-7/12 p-8 md:p-10">
           <header className="mb-6">
             <div className="flex items-center gap-3 mb-3">
-              <StatusBadge status={issue.status} />
-              <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Report ID #{issue.id}</span>
+              <StatusBadge status={primaryIssue.status} />
+              <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
+                {groupedReports.length > 1 ? 'Report Group' : 'Report ID'} {getDisplayId(primaryIssue.report_group_id, primaryIssue.id)}
+              </span>
             </div>
-            <h2 className="text-3xl font-black text-slate-800 leading-tight mb-2">{issue.title}</h2>
-            {issue.department && (
+            <h2 className="text-3xl font-black text-slate-800 leading-tight mb-2">{primaryIssue.title}</h2>
+            {primaryIssue.department && (
               <div className="inline-flex mb-3 px-3 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-100 uppercase tracking-wider">
-                {issue.department}
+                {primaryIssue.department}
               </div>
             )}
             <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400">
@@ -769,11 +1013,11 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
           </header>
 
           <div className="space-y-6">
-            {issue.email && (
+            {primaryIssue.email && (
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Reporter Email</h4>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 text-sm font-semibold break-all">
-                  {issue.email}
+                  {primaryIssue.email}
                 </div>
               </div>
             )}
@@ -781,36 +1025,109 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
             <div>
               <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Citizen Description</h4>
               <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
-                {issue.description}
+                {primaryIssue.description}
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {groupedReports.length > 1 && (
               <div>
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Take Action</h4>
-                <select 
-                  value={issue.status}
-                  onChange={(e) => updateStatus(issue.id, e.target.value)}
-                  className="w-full sm:w-auto px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-bold text-xs focus:ring-4 focus:ring-blue-500/10 cursor-pointer appearance-none outline-none"
-                >
-                  <option value="OPEN">Mark as Open</option>
-                  <option value="IN_PROGRESS">Set to In Progress</option>
-                  <option value="RESOLVED">Resolve Issue</option>
-                </select>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">
+                  Reports in This Group ({groupedReports.length})
+                </h4>
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  {groupedReports.map((report) => (
+                    <button
+                      key={report.id}
+                      type="button"
+                      onClick={() => setSelectedReportId(report.id)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all ${selectedReportId === report.id ? 'border-blue-200 bg-blue-50 shadow-sm' : 'border-slate-100 bg-slate-50 hover:border-blue-100'}`}
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="text-xs font-black text-slate-700 truncate">{generateReportId(report.id)} {report.title}</span>
+                        <StatusBadge status={report.status} />
+                      </div>
+                      <p className="text-[11px] text-slate-500 line-clamp-2">{report.description}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this issue permanently?')) {
-                      deleteIssue(issue.id);
-                      onClose();
-                    }
-                  }}
-                  className="px-4 py-3 bg-red-50 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 active:scale-95"
-                >
-                  <Trash2 size={14} />
-                  Delete
-                </button>
+            )}
+
+            <div>
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 flex items-center gap-2">
+                <MessageSquare size={13} className="text-blue-500" /> Official Status Logs
+              </h4>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3 max-h-48 overflow-y-auto">
+                {(issueUpdates && issueUpdates.length > 0) ? issueUpdates.map((update, index) => (
+                  <div key={index} className="bg-white p-3 rounded-xl border border-slate-100">
+                    <p className="text-xs text-slate-700 font-medium">{update.text}</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                      {update.author} • {new Date(update.time).toLocaleString()}
+                    </p>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-400 italic text-center py-2">No official updates posted yet.</p>
+                )}
+              </div>
+            </div>
+
+            {(currentUserType === 'admin' || currentUserType === 'dept') && (
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Post Update</h4>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={newUpdateText}
+                    onChange={(e) => setNewUpdateText(e.target.value)}
+                    placeholder="Write an official update for citizens..."
+                    className="w-full pl-4 pr-12 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all text-xs font-medium"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const trimmedText = newUpdateText.trim();
+                      if (!trimmedText) return;
+                      onAddUpdate(primaryIssue.report_group_id || primaryIssue.id, trimmedText);
+                      setNewUpdateText('');
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all"
+                  >
+                    <Send size={15} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              {(currentUserType === 'admin' || currentUserType === 'dept') && (
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Take Action</h4>
+                  <select 
+                    value={issue.status}
+                    onChange={(e) => updateStatus(primaryIssue.id, e.target.value)}
+                    className="w-full sm:w-auto px-4 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 font-bold text-xs focus:ring-4 focus:ring-blue-500/10 cursor-pointer appearance-none outline-none"
+                  >
+                    <option value="OPEN">Mark as Open</option>
+                    <option value="IN_PROGRESS">Set to In Progress</option>
+                    <option value="RESOLVED">Resolve Issue</option>
+                  </select>
+                </div>
+              )}
+              <div className="flex items-center gap-2 ml-auto">
+                {currentUserType === 'admin' && (
+                  <button 
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this issue permanently?')) {
+                        deleteIssue(primaryIssue.id);
+                        onClose();
+                      }
+                    }}
+                    className="px-4 py-3 bg-red-50 text-red-600 font-bold text-xs rounded-xl hover:bg-red-100 transition-all flex items-center gap-2 active:scale-95"
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </button>
+                )}
                 <button 
                   onClick={onClose}
                   className="px-6 py-3 bg-slate-800 text-white font-bold text-xs rounded-xl shadow-lg shadow-slate-200 hover:bg-slate-700 active:scale-95 transition-all"
@@ -826,12 +1143,30 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, token }) 
   );
 };
 
-const AdminView = ({ issues, updateStatus, handleAIAnalyze, analysisMap, analyzingId, onIssueClick, deleteIssue, token, isLoading }) => (
+const AdminView = ({
+  issues,
+  updateStatus,
+  handleAIAnalyze,
+  analysisMap,
+  analyzingId,
+  onIssueClick,
+  deleteIssue,
+  token,
+  isLoading,
+  filterStatus,
+  setFilterStatus,
+  filterDepartment,
+  setFilterDepartment,
+  sortOption,
+  setSortOption,
+  dashboardTitle = 'Management Console',
+  dashboardSubtitle = 'Resolution tracking for Vellore Smart City'
+}) => (
   <div className="max-w-7xl mx-auto p-6 md:p-10 animate-in slide-in-from-bottom-4 duration-700">
     <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
       <div>
-        <h2 className="text-4xl font-black text-slate-800 tracking-tight">Management Console</h2>
-        <p className="text-slate-500 font-medium">Resolution tracking for Vellore Smart City</p>
+        <h2 className="text-4xl font-black text-slate-800 tracking-tight">{dashboardTitle}</h2>
+        <p className="text-slate-500 font-medium">{dashboardSubtitle}</p>
       </div>
       
       <div className="flex gap-4">
@@ -848,6 +1183,17 @@ const AdminView = ({ issues, updateStatus, handleAIAnalyze, analysisMap, analyzi
           <span className="text-[9px] uppercase font-black text-emerald-400 tracking-widest">Fixed</span>
         </div>
       </div>
+    </div>
+
+    <div className="mb-6">
+      <IssueFilters
+        filterStatus={filterStatus}
+        setFilterStatus={setFilterStatus}
+        filterDepartment={filterDepartment}
+        setFilterDepartment={setFilterDepartment}
+        sortOption={sortOption}
+        setSortOption={setSortOption}
+      />
     </div>
 
     <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden">
@@ -876,7 +1222,7 @@ const AdminView = ({ issues, updateStatus, handleAIAnalyze, analysisMap, analyzi
             <tbody className="divide-y divide-slate-50">
               {issues.map(issue => (
                 <tr 
-                  key={issue.id} 
+                  key={issue.report_group_id || issue.id} 
                   onClick={() => onIssueClick(issue)}
                   className="hover:bg-slate-50 transition-colors group cursor-pointer"
                 >
@@ -893,6 +1239,14 @@ const AdminView = ({ issues, updateStatus, handleAIAnalyze, analysisMap, analyzi
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="font-extrabold text-slate-800 text-base">{issue.title}</div>
+                          <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">
+                            {getDisplayId(issue.report_group_id, issue.id)}
+                          </span>
+                          {(issue.reportCount || 1) > 1 && (
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">
+                              {issue.reportCount} reports
+                            </span>
+                          )}
                           {apiKey && (
                             <button 
                               onClick={(e) => {
@@ -948,7 +1302,8 @@ export default function App() {
   const apiKey = ''; // Set your Gemini API key here
   
   const [view, setView] = useState('user'); 
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [authType, setAuthType] = useState(null);
+  const [currentDept, setCurrentDept] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [issues, setIssues] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -956,6 +1311,8 @@ export default function App() {
   
   const [loginData, setLoginData] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
+  const [deptLoginData, setDeptLoginData] = useState({ username: '', password: '' });
+  const [deptLoginError, setDeptLoginError] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -967,13 +1324,16 @@ export default function App() {
     image: null,
     geoTagged: false
   });
-  const [addressSuggestions, setAddressSuggestions] = useState([]);
   const [notification, setNotification] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('ALL');
+  const [filterDepartment, setFilterDepartment] = useState('ALL');
+  const [sortOption, setSortOption] = useState(SORT_OPTIONS.NEWEST);
   
-  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [selectedIssueGroup, setSelectedIssueGroup] = useState(null);
   const [isAILoading, setIsAILoading] = useState(false);
   const [analysisMap, setAnalysisMap] = useState({});
   const [analyzingId, setAnalyzingId] = useState(null);
+  const [issueUpdatesMap, setIssueUpdatesMap] = useState({});
 
   // Fetch issues on mount
   useEffect(() => {
@@ -1013,7 +1373,7 @@ export default function App() {
       const accessToken = response.data.access_token;
       localStorage.setItem('token', accessToken);
       setToken(accessToken);
-      setIsAdmin(true);
+      setAuthType('admin');
       setView('admin');
       setLoginData({ username: '', password: '' });
       showNotification('Welcome, Administrator', 'success');
@@ -1027,34 +1387,41 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    setIsAdmin(false);
+    setAuthType(null);
+    setCurrentDept(null);
     setView('user');
     setToken('');
     localStorage.removeItem('token');
     showNotification('Logged out successfully', 'info');
     setLoginData({ username: '', password: '' });
+    setDeptLoginData({ username: '', password: '' });
+    setDeptLoginError('');
     fetchIssues();
   };
 
-  const searchAddress = async (query) => {
-    if (!query || query.length < 3) {
-      setAddressSuggestions([]);
-      return;
-    }
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ' Vellore, Tamil Nadu')}&limit=5`);
-      if (!response.ok) return;
-      const data = await response.json();
-      setAddressSuggestions(data || []);
-    } catch (err) {
-      console.warn("Geocoding service unavailable");
-    }
+  const handleDepartmentSelect = (department) => {
+    setCurrentDept(department);
+    setDeptLoginData({ username: department.username, password: '' });
+    setDeptLoginError('');
+    setView('dept-login');
   };
 
-  const selectSuggestion = (sug) => {
-    const coords = [parseFloat(sug.lat), parseFloat(sug.lon)];
-    setFormData({ ...formData, location: coords, addressSearch: sug.display_name });
-    setAddressSuggestions([]);
+  const handleDepartmentLogin = (e) => {
+    e.preventDefault();
+    if (!currentDept) return;
+
+    if (
+      deptLoginData.username.trim().toLowerCase() === currentDept.username &&
+      deptLoginData.password === currentDept.password
+    ) {
+      setAuthType('dept');
+      setView('dept-dashboard');
+      setDeptLoginError('');
+      showNotification(`${currentDept.name} login successful`, 'success');
+      return;
+    }
+
+    setDeptLoginError('Invalid department credentials');
   };
 
   const handleReportSubmit = async (e) => {
@@ -1130,7 +1497,7 @@ export default function App() {
           { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         );
         showNotification('Issue deleted successfully', 'success');
-        setSelectedIssue(null);
+        setSelectedIssueGroup(null);
         fetchIssues();
       } catch (err) {
         console.error('Failed to delete issue:', err);
@@ -1177,25 +1544,148 @@ export default function App() {
     setAnalyzingId(null);
   };
 
+  const addIssueUpdate = (issueId, text) => {
+    const author = authType === 'admin'
+      ? 'Central Admin'
+      : (currentDept ? currentDept.name : 'Department Staff');
+
+    const newUpdate = {
+      text,
+      author,
+      time: new Date().toISOString()
+    };
+
+    setIssueUpdatesMap((prev) => ({
+      ...prev,
+      [issueId]: [...(prev[issueId] || []), newUpdate]
+    }));
+
+    showNotification('Official update posted', 'success');
+  };
+
+  const filteredAndSortedIssues = [...issues]
+    .filter((issue) => filterStatus === 'ALL' || issue.status === filterStatus)
+    .filter((issue) => filterDepartment === 'ALL' || issue.department === filterDepartment)
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+
+      if (sortOption === SORT_OPTIONS.OLDEST) {
+        return dateA - dateB;
+      }
+
+      if (sortOption === SORT_OPTIONS.PRIORITY) {
+        const priorityRank = {
+          OPEN: 3,
+          IN_PROGRESS: 2,
+          RESOLVED: 1
+        };
+        const rankA = priorityRank[a.status] || 0;
+        const rankB = priorityRank[b.status] || 0;
+        if (rankA !== rankB) return rankB - rankA;
+        return dateB - dateA;
+      }
+
+      return dateB - dateA;
+    });
+
+  const buildGroupedIssueCards = (issueList) => {
+    const groupedMap = issueList.reduce((accumulator, issue) => {
+      // Only group reports that have the same CLT group ID
+      // Single reports (with null report_group_id) each get their own unique key
+      const groupId = convertLegacyGroupId(issue.report_group_id, issue.id);
+      const key = groupId || `single-${issue.id}`;
+      
+      if (!accumulator[key]) {
+        accumulator[key] = [];
+      }
+      accumulator[key].push(issue);
+      return accumulator;
+    }, {});
+
+    const cards = Object.entries(groupedMap).map(([groupId, groupedReports]) => {
+      const sortedReports = [...groupedReports].sort(
+        (left, right) => new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime()
+      );
+      const topReport = sortedReports[0];
+      
+      // For single reports, keep report_group_id as null; for grouped, use the CLT ID
+      const finalGroupId = groupedReports.length === 1 ? null : groupId;
+      
+      return {
+        ...topReport,
+        report_group_id: finalGroupId,
+        groupedReports: sortedReports,
+        reportCount: sortedReports.length
+      };
+    });
+
+    return cards.sort((left, right) => {
+      const newestLeft = Math.max(...left.groupedReports.map(report => new Date(report.created_at || 0).getTime()));
+      const newestRight = Math.max(...right.groupedReports.map(report => new Date(report.created_at || 0).getTime()));
+      const oldestLeft = Math.min(...left.groupedReports.map(report => new Date(report.created_at || 0).getTime()));
+      const oldestRight = Math.min(...right.groupedReports.map(report => new Date(report.created_at || 0).getTime()));
+
+      if (sortOption === SORT_OPTIONS.OLDEST) {
+        return oldestLeft - oldestRight;
+      }
+
+      if (sortOption === SORT_OPTIONS.PRIORITY) {
+        const priorityRank = { OPEN: 3, IN_PROGRESS: 2, RESOLVED: 1 };
+        const leftRank = Math.max(...left.groupedReports.map(report => priorityRank[report.status] || 0));
+        const rightRank = Math.max(...right.groupedReports.map(report => priorityRank[report.status] || 0));
+        if (leftRank !== rightRank) return rightRank - leftRank;
+        return newestRight - newestLeft;
+      }
+
+      return newestRight - newestLeft;
+    });
+  };
+
+  const departmentScopedIssues = (view === 'dept-dashboard' && currentDept)
+    ? filteredAndSortedIssues.filter((issue) => issue.department === currentDept.name)
+    : filteredAndSortedIssues;
+
+  const groupedFeedIssues = buildGroupedIssueCards(filteredAndSortedIssues);
+  const groupedDepartmentIssues = buildGroupedIssueCards(departmentScopedIssues);
+
   return (
     <div className="min-h-screen bg-[#FDFEFF] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-700">
-      <Navbar setView={setView} view={view} isAdmin={isAdmin} handleLogout={handleLogout} />
+      <Navbar setView={setView} view={view} authType={authType} handleLogout={handleLogout} />
       
       <main>
         {view === 'user' && (
           <UserView 
             formData={formData} 
             setFormData={setFormData} 
-            searchAddress={searchAddress} 
-            addressSuggestions={addressSuggestions} 
-            selectSuggestion={selectSuggestion} 
             handleReportSubmit={handleReportSubmit} 
-            issues={issues}
+            issues={groupedFeedIssues}
+            onIssueClick={setSelectedIssueGroup}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            filterDepartment={filterDepartment}
+            setFilterDepartment={setFilterDepartment}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
             isLoading={isLoading}
             isAILoading={isAILoading}
             handleAIRefine={handleAIRefine}
             apiKey={apiKey}
             isSubmitting={isSubmitting}
+          />
+        )}
+        {view === 'dept-select' && (
+          <DepartmentSelectView onSelect={handleDepartmentSelect} setView={setView} />
+        )}
+        {view === 'dept-login' && (
+          <DepartmentLoginView
+            currentDept={currentDept}
+            deptLoginData={deptLoginData}
+            setDeptLoginData={setDeptLoginData}
+            deptLoginError={deptLoginError}
+            handleDeptLogin={handleDepartmentLogin}
+            setView={setView}
+            isLoading={isLoading}
           />
         )}
         {view === 'login' && (
@@ -1210,7 +1700,7 @@ export default function App() {
         )}
         {view === 'admin' && (
           <AdminView 
-            issues={issues} 
+            issues={groupedFeedIssues} 
             updateStatus={updateStatus}
             deleteIssue={deleteIssue}
             isLoading={isLoading}
@@ -1218,19 +1708,51 @@ export default function App() {
             handleAIAnalyze={handleAIAnalyze}
             analysisMap={analysisMap}
             analyzingId={analyzingId}
-            onIssueClick={setSelectedIssue}
+            onIssueClick={setSelectedIssueGroup}
             apiKey={apiKey}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            filterDepartment={filterDepartment}
+            setFilterDepartment={setFilterDepartment}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
+            dashboardTitle="Management Console"
+            dashboardSubtitle="Resolution tracking for Vellore Smart City"
+          />
+        )}
+        {view === 'dept-dashboard' && (
+          <AdminView 
+            issues={groupedDepartmentIssues} 
+            updateStatus={updateStatus}
+            deleteIssue={deleteIssue}
+            isLoading={isLoading}
+            token={token}
+            handleAIAnalyze={handleAIAnalyze}
+            analysisMap={analysisMap}
+            analyzingId={analyzingId}
+            onIssueClick={setSelectedIssueGroup}
+            apiKey={apiKey}
+            filterStatus={filterStatus}
+            setFilterStatus={setFilterStatus}
+            filterDepartment={filterDepartment}
+            setFilterDepartment={setFilterDepartment}
+            sortOption={sortOption}
+            setSortOption={setSortOption}
+            dashboardTitle={`${currentDept ? currentDept.name : 'Department'} Console`}
+            dashboardSubtitle="Manage and update issues assigned to your department"
           />
         )}
       </main>
 
-      {selectedIssue && (
+      {selectedIssueGroup && (
         <IssueDetailModal 
-          issue={selectedIssue} 
-          onClose={() => setSelectedIssue(null)} 
+          issue={selectedIssueGroup} 
+          onClose={() => setSelectedIssueGroup(null)} 
           updateStatus={updateStatus} 
           deleteIssue={deleteIssue}
-          token={token}
+          currentUserType={authType}
+          issueUpdates={issueUpdatesMap[selectedIssueGroup.report_group_id || selectedIssueGroup.id] || []}
+          onAddUpdate={addIssueUpdate}
         />
       )}
 

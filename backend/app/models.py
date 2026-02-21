@@ -6,6 +6,7 @@ class Issue(Base):
     __tablename__ = "issues"
 
     id = Column(Integer, primary_key=True, index=True)
+    report_group_id = Column(String, index=True)
     title = Column(String)
     email = Column(String)
     department = Column(String)

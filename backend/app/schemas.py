@@ -13,6 +13,7 @@ class IssueCreate(BaseModel):
 
 class IssueResponse(BaseModel):
     id: int
+    report_group_id: Optional[str] = None
     title: str
     email: Optional[str] = None
     department: Optional[str] = None

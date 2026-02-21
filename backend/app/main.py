@@ -22,11 +22,45 @@ def ensure_issue_department_column():
             if "email" not in column_names:
                 conn.execute(text("ALTER TABLE issues ADD COLUMN email VARCHAR"))
                 conn.commit()
+            if "report_group_id" not in column_names:
+                conn.execute(text("ALTER TABLE issues ADD COLUMN report_group_id VARCHAR"))
+                conn.commit()
     except Exception as exc:
         print(f"Database migration warning: {exc}")
 
 
+def cleanup_group_ids():
+    """
+    Ensures only reports that are truly grouped have CLT group IDs.
+    Single reports should have report_group_id = NULL.
+    """
+    try:
+        with engine.connect() as conn:
+            # Find all CLT group IDs and their counts
+            result = conn.execute(text("""
+                SELECT report_group_id, COUNT(*) as count 
+                FROM issues 
+                WHERE report_group_id IS NOT NULL AND report_group_id LIKE 'CLT-%'
+                GROUP BY report_group_id
+            """)).fetchall()
+            
+            # Remove CLT IDs from reports that are alone in their group (should be single reports)
+            for group_id, count in result:
+                if count == 1:
+                    conn.execute(text(f"""
+                        UPDATE issues 
+                        SET report_group_id = NULL 
+                        WHERE report_group_id = '{group_id}'
+                    """))
+                    conn.commit()
+                    print(f"Cleaned up orphaned group ID {group_id}")
+            
+    except Exception as exc:
+        print(f"Group ID cleanup warning: {exc}")
+
+
 ensure_issue_department_column()
+cleanup_group_ids()
 
 app = FastAPI(title="SmartVellore API", version="1.0")
 
