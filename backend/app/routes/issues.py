@@ -8,6 +8,7 @@ import shutil
 import os
 from geopy.distance import geodesic
 from datetime import datetime
+from app.services.email_service import email_service
 
 router = APIRouter(prefix="/issues", tags=["Issues"])
 GROUP_DISTANCE_METERS = 75
@@ -132,6 +133,22 @@ def create_issue(
     # IMPORTANT: Single reports keep report_group_id = None
     # Only grouped reports (2+) get a CLT group ID
     # No need to assign a group ID here
+
+    # Send confirmation email (non-blocking)
+    try:
+        report_id = generate_report_id(new_issue.id)
+        email_service.send_issue_confirmation(
+            citizen_email=email,
+            issue_id=new_issue.id,
+            report_id=report_id,
+            title=title,
+            department=department,
+            status=new_issue.status,
+            created_at=new_issue.created_at
+        )
+    except Exception as e:
+        # Log error but don't fail the request
+        print(f"⚠️ Email sending failed for issue {new_issue.id}: {str(e)}")
 
     return new_issue
 
