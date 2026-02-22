@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 
 // --- CONSTANTS ---
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 const VELLORE_CENTER = [12.9165, 79.1325];
 
 const ISSUE_STATUS = {

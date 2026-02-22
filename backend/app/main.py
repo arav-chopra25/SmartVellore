@@ -72,9 +72,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "*",  # Allow all for development
+        "https://*.vercel.app",  # Vercel deployment
+        "*",  # Allow all for development/testing
     ],
     allow_credentials=True,
     allow_methods=["*"],
