@@ -1401,7 +1401,7 @@ export default function App() {
 
   const handleDepartmentSelect = (department) => {
     setCurrentDept(department);
-    setDeptLoginData({ username: department.username, password: '' });
+    setDeptLoginData({ username: '', password: '' });
     setDeptLoginError('');
     setView('dept-login');
   };
