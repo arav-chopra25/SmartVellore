@@ -41,7 +41,8 @@ const DEPARTMENTS = [
   'Public Works Department',
   'Electricity Department',
   'Solid Waste Management',
-  'Traffic Department'
+  'Traffic Department',
+  'Others'
 ];
 
 const DEPARTMENT_PORTALS = [
