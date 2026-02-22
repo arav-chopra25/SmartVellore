@@ -740,7 +740,7 @@ const UserView = ({
                 <div className="rounded-[1.25rem] border border-slate-200 overflow-hidden">
                   <img
                     src={photoPreview}
-                    alt="Photo preview"
+                    alt="Preview"
                     className="w-full h-48 object-cover"
                   />
                 </div>
