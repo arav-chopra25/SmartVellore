@@ -360,3 +360,5 @@ Please do not reply to this email.
 """
 
 
+# Singleton instance
+email_service = EmailService()
