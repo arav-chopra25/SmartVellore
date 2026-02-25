@@ -9,7 +9,7 @@ load_dotenv(dotenv_path=env_file)
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:///./smartvellore.db"
+    DATABASE_URL: str = "postgresql://smartvellore_db_user:MyiU3iCQCW2wBpwYQiDreV6WnQB8wrUK@dpg-d6fidp8gjchc73a5lod0-a/smartvellore_db"
     SECRET_KEY: str = "supersecretkey"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
