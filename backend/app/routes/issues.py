@@ -167,9 +167,26 @@ def update_issue_status(
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
 
+    old_status = issue.status
     issue.status = status.status
     db.commit()
     db.refresh(issue)
+
+    # Send status update email (non-blocking)
+    try:
+        report_id = generate_report_id(issue.id)
+        email_service.send_status_update(
+            citizen_email=issue.email,
+            report_id=report_id,
+            title=issue.title,
+            old_status=old_status,
+            new_status=issue.status,
+            updated_at=datetime.utcnow(),
+            update_notes=None
+        )
+    except Exception as e:
+        # Log error but don't fail the request
+        print(f"⚠️ Email sending failed for status update on issue {issue.id}: {str(e)}")
 
     return issue
 
