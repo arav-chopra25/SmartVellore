@@ -1014,7 +1014,7 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
           </header>
 
           <div className="space-y-6">
-            {primaryIssue.email && (
+            {(currentUserType === 'admin' || currentUserType === 'dept') && primaryIssue.email && (
               <div>
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Reporter Email</h4>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 text-sm font-semibold break-all">
