@@ -970,6 +970,11 @@ const UserView = ({
                       {issue.department}
                     </div>
                   )}
+                  {issue.ai_department_suggestion && issue.department === 'Others' && !issue.ai_department_approved && (
+                    <div className="inline-flex mb-2 ml-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-100 animate-pulse">
+                      ⚠️ AI suggests {issue.ai_department_suggestion}
+                    </div>
+                  )}
                   <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed mb-4">{issue.description}</p>
                   <div className="flex flex-wrap items-center gap-5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     <span className="flex items-center gap-1.5">
@@ -1756,7 +1761,11 @@ export default function App() {
 
       setFormData({ title: '', email: '', department: '', description: '', location: VELLORE_CENTER, addressSearch: '', image: null, geoTagged: false });
       showNotification('Issue reported successfully!', 'success');
-      fetchIssues();
+      
+      // Small delay to ensure backend has processed the issue
+      setTimeout(() => {
+        fetchIssues();
+      }, 500);
     } catch (err) {
       console.error('Failed to submit issue:', err);
       showNotification('Failed to submit issue. Try again.', 'error');
