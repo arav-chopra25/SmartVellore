@@ -23,7 +23,9 @@ import {
   Zap,
   Car,
   MessageSquare,
-  Send
+  Send,
+  ChevronLeft,
+  Lock
 } from 'lucide-react';
 
 // --- CONSTANTS ---
@@ -46,11 +48,91 @@ const DEPARTMENTS = [
 ];
 
 const DEPARTMENT_PORTALS = [
-  { id: 'water', username: 'water', password: '123', name: 'Water Supply Department', icon: Droplets, color: 'text-blue-500', bg: 'bg-blue-50' },
-  { id: 'pwd', username: 'pwd', password: '123', name: 'Public Works Department', icon: Building2, color: 'text-orange-500', bg: 'bg-orange-50' },
-  { id: 'electricity', username: 'electricity', password: '123', name: 'Electricity Department', icon: Zap, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-  { id: 'waste', username: 'waste', password: '123', name: 'Solid Waste Management', icon: Trash2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-  { id: 'traffic', username: 'traffic', password: '123', name: 'Traffic Department', icon: Car, color: 'text-purple-500', bg: 'bg-purple-50' }
+  { 
+    id: 'water', 
+    username: 'water', 
+    password: '123', 
+    name: 'Water Supply Department', 
+    icon: Droplets, 
+    color: 'text-blue-500', 
+    bg: 'bg-blue-50',
+    theme: {
+      bg: 'bg-blue-600',
+      light: 'bg-blue-50',
+      text: 'text-blue-600',
+      border: 'border-blue-200',
+      ring: 'focus:ring-blue-500',
+      button: 'bg-blue-600 hover:bg-blue-700'
+    }
+  },
+  { 
+    id: 'pwd', 
+    username: 'pwd', 
+    password: '123', 
+    name: 'Public Works Department', 
+    icon: Building2, 
+    color: 'text-orange-500', 
+    bg: 'bg-orange-50',
+    theme: {
+      bg: 'bg-orange-600',
+      light: 'bg-orange-50',
+      text: 'text-orange-600',
+      border: 'border-orange-200',
+      ring: 'focus:ring-orange-500',
+      button: 'bg-orange-600 hover:bg-orange-700'
+    }
+  },
+  { 
+    id: 'electricity', 
+    username: 'electricity', 
+    password: '123', 
+    name: 'Electricity Department', 
+    icon: Zap, 
+    color: 'text-yellow-500', 
+    bg: 'bg-yellow-50',
+    theme: {
+      bg: 'bg-yellow-500',
+      light: 'bg-yellow-50',
+      text: 'text-yellow-600',
+      border: 'border-yellow-200',
+      ring: 'focus:ring-yellow-500',
+      button: 'bg-yellow-500 hover:bg-yellow-600'
+    }
+  },
+  { 
+    id: 'waste', 
+    username: 'waste', 
+    password: '123', 
+    name: 'Solid Waste Management', 
+    icon: Trash2, 
+    color: 'text-emerald-500', 
+    bg: 'bg-emerald-50',
+    theme: {
+      bg: 'bg-emerald-600',
+      light: 'bg-emerald-50',
+      text: 'text-emerald-600',
+      border: 'border-emerald-200',
+      ring: 'focus:ring-emerald-500',
+      button: 'bg-emerald-600 hover:bg-emerald-700'
+    }
+  },
+  { 
+    id: 'traffic', 
+    username: 'traffic', 
+    password: '123', 
+    name: 'Traffic Department', 
+    icon: Car, 
+    color: 'text-purple-500', 
+    bg: 'bg-purple-50',
+    theme: {
+      bg: 'bg-purple-600',
+      light: 'bg-purple-50',
+      text: 'text-purple-600',
+      border: 'border-purple-200',
+      ring: 'focus:ring-purple-500',
+      button: 'bg-purple-600 hover:bg-purple-700'
+    }
+  }
 ];
 
 const SORT_OPTIONS = {
@@ -371,62 +453,106 @@ const DepartmentLoginView = ({ currentDept, deptLoginData, setDeptLoginData, dep
   if (!currentDept) return null;
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center p-6 bg-slate-50/50">
-      <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl overflow-hidden border border-white">
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-12 text-white text-center">
-          <div className="bg-white/20 backdrop-blur-md w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <Building2 size={40} />
-          </div>
-          <h2 className="text-2xl font-black">{currentDept.name}</h2>
-          <p className="text-slate-300 text-xs mt-2 font-bold uppercase tracking-widest">Department Staff Portal</p>
-        </div>
-
-        <form onSubmit={handleDeptLogin} className="p-10 space-y-6">
-          {deptLoginError && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-3">
-              <AlertCircle size={16} />
-              {deptLoginError}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-4">
+      <div className="flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
+        <div className="w-full max-w-[420px] bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 overflow-hidden border border-slate-100">
+          {/* Dynamic Header Based on Department Theme */}
+          <div className={`${currentDept.theme.bg} p-10 flex flex-col items-center text-white text-center relative overflow-hidden`}>
+            {/* Decorative background shapes */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/5 rounded-full -ml-12 -mb-12" />
+            
+            <div className="relative z-10 w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 shadow-inner">
+              <currentDept.icon size={44} strokeWidth={1.5} />
             </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Department ID</label>
-            <input
-              type="text"
-              className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700"
-              value={deptLoginData.username}
-              onChange={e => setDeptLoginData({ ...deptLoginData, username: e.target.value })}
-              disabled={isLoading}
-            />
+            <h2 className="relative z-10 text-2xl font-bold mb-1 leading-tight">{currentDept.name}</h2>
+            <p className="relative z-10 text-white/80 text-[10px] uppercase tracking-[0.2em] font-bold">Department Staff Portal</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Access Key</label>
-            <input
-              type="password"
-              className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-100 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700"
-              value={deptLoginData.password}
-              onChange={e => setDeptLoginData({ ...deptLoginData, password: e.target.value })}
-              disabled={isLoading}
-            />
+          {/* Login Form */}
+          <div className="p-8 md:p-10">
+            <form onSubmit={handleDeptLogin} className="space-y-6">
+              {deptLoginError && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold border border-red-100 flex items-center gap-3 animate-shake">
+                  <AlertCircle size={16} />
+                  {deptLoginError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Department ID</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-300">
+                    <ShieldCheck size={20} />
+                  </div>
+                  <input 
+                    type="text" 
+                    required
+                    disabled={isLoading}
+                    className={`w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 outline-none transition-all duration-300 ${currentDept.theme.ring} focus:bg-white focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed`}
+                    placeholder="e.g. WS-2024-001"
+                    value={deptLoginData.username}
+                    onChange={e => setDeptLoginData({ ...deptLoginData, username: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Access Key</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-300">
+                    <Lock size={20} />
+                  </div>
+                  <input 
+                    type="password" 
+                    required
+                    disabled={isLoading}
+                    className={`w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 outline-none transition-all duration-300 ${currentDept.theme.ring} focus:bg-white focus:border-transparent disabled:bg-slate-100 disabled:cursor-not-allowed`}
+                    placeholder="••••••••"
+                    value={deptLoginData.password}
+                    onChange={e => setDeptLoginData({ ...deptLoginData, password: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isLoading}
+                className={`w-full ${currentDept.theme.button} text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Authenticating...
+                  </>
+                ) : (
+                  "Authenticate"
+                )}
+              </button>
+            </form>
+
+            <div className="mt-10 flex flex-col items-center gap-6">
+              <button 
+                type="button"
+                onClick={() => setView('dept-select')}
+                className="flex items-center gap-2 text-slate-400 hover:text-slate-600 font-bold text-xs uppercase tracking-widest transition-colors group"
+              >
+                <ChevronLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                Change Department
+              </button>
+              
+              <div className="flex gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+              </div>
+            </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-slate-800 hover:bg-slate-700 disabled:bg-slate-400 text-white font-black py-5 rounded-2xl shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]"
-          >
-            {isLoading ? 'Authenticating...' : 'Authenticate'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setView('dept-select')}
-            className="w-full text-center text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-widest"
-          >
-            Change Department
-          </button>
-        </form>
+        </div>
+        
+        <p className="mt-8 text-slate-400 text-xs font-medium">
+          Secure endpoint protected by SmartVellore Security
+        </p>
       </div>
     </div>
   );
@@ -918,7 +1044,7 @@ const LoginView = ({ handleLogin, loginData, setLoginData, loginError, setView, 
   </div>
 );
 
-const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUserType, issueUpdates, onAddUpdate }) => {
+const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUserType, currentDept, issueUpdates, onAddUpdate }) => {
   const [newUpdateText, setNewUpdateText] = useState('');
   const [selectedReportId, setSelectedReportId] = useState(null);
 
@@ -935,6 +1061,10 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
   const groupedReports = (issue.groupedReports && issue.groupedReports.length > 0) ? issue.groupedReports : [issue];
 
   const primaryIssue = groupedReports.find((report) => report.id === selectedReportId) || groupedReports[0];
+  const canPostDepartmentUpdate =
+    currentUserType === 'dept' &&
+    currentDept &&
+    primaryIssue.department === currentDept.name;
 
   const dateStr = new Date(primaryIssue.created_at || primaryIssue.timestamp).toLocaleDateString('en-IN', {
     day: 'numeric',
@@ -1001,6 +1131,61 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
                 {primaryIssue.department}
               </div>
             )}
+            {currentUserType === 'admin' && primaryIssue.department === 'Others' && !primaryIssue.ai_department_approved && primaryIssue.ai_department_suggestion && (
+              <div className="mb-4 p-3 bg-amber-50 border-2 border-amber-300 rounded-xl">
+                <p className="text-[10px] font-black text-amber-800 uppercase tracking-wider mb-2">Department Approval Required</p>
+                <p className="text-xs text-amber-700 font-semibold mb-3">
+                  AI suggests <strong>{primaryIssue.ai_department_suggestion}</strong> ({(Number(primaryIssue.ai_confidence) * 100).toFixed(0)}% confident)
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      fetch(`${API_BASE}/admin/issues/${primaryIssue.id}/approve-department`, {
+                        method: 'POST',
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+                        },
+                        body: JSON.stringify({ approved: true })
+                      })
+                      .then(r => r.json())
+                      .then(() => {
+                        onClose();
+                        setTimeout(() => window.location.reload(), 500);
+                      })
+                      .catch(e => console.error('Error approving department:', e));
+                    }}
+                    className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg transition-colors"
+                  >
+                    Approve Suggestion
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newDept = prompt('Enter alternative department:', primaryIssue.ai_department_suggestion);
+                      if (newDept) {
+                        fetch(`${API_BASE}/admin/issues/${primaryIssue.id}/approve-department`, {
+                          method: 'POST',
+                          headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+                          },
+                          body: JSON.stringify({ approved: false, new_department: newDept })
+                        })
+                        .then(r => r.json())
+                        .then(() => {
+                          onClose();
+                          setTimeout(() => window.location.reload(), 500);
+                        })
+                        .catch(e => console.error('Error assigning department:', e));
+                      }
+                    }}
+                    className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-bold rounded-lg transition-colors"
+                  >
+                    Assign Manually
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400">
               <div className="flex items-center gap-1.5">
                 <Calendar size={14} className="text-blue-500" />
@@ -1019,6 +1204,31 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Reporter Email</h4>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-slate-700 text-sm font-semibold break-all">
                   {primaryIssue.email}
+                </div>
+              </div>
+            )}
+
+            {(primaryIssue.ai_category || primaryIssue.ai_priority || primaryIssue.ai_department_suggestion || primaryIssue.ai_summary) && (
+              <div>
+                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">AI Triage (Phase {primaryIssue.ai_phase || 1})</h4>
+                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-2">
+                  <div className="flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-wider">
+                    {primaryIssue.ai_category && (
+                      <span className="px-2 py-1 rounded-full bg-white text-indigo-700 border border-indigo-200">Category: {primaryIssue.ai_category}</span>
+                    )}
+                    {primaryIssue.ai_priority && (
+                      <span className="px-2 py-1 rounded-full bg-white text-rose-700 border border-rose-200">Priority: {primaryIssue.ai_priority}</span>
+                    )}
+                    {primaryIssue.ai_department_suggestion && (
+                      <span className="px-2 py-1 rounded-full bg-white text-blue-700 border border-blue-200">Suggested: {primaryIssue.ai_department_suggestion}</span>
+                    )}
+                    {(primaryIssue.ai_confidence || primaryIssue.ai_confidence === 0) && (
+                      <span className="px-2 py-1 rounded-full bg-white text-slate-700 border border-slate-200">Confidence: {(Number(primaryIssue.ai_confidence) * 100).toFixed(0)}%</span>
+                    )}
+                  </div>
+                  {primaryIssue.ai_summary && (
+                    <p className="text-xs text-indigo-700 font-semibold">{primaryIssue.ai_summary}</p>
+                  )}
                 </div>
               </div>
             )}
@@ -1072,7 +1282,7 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
               </div>
             </div>
 
-            {(currentUserType === 'admin' || currentUserType === 'dept') && (
+            {canPostDepartmentUpdate && (
               <div className="space-y-2">
                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Post Update</h4>
                 <div className="relative">
@@ -1099,8 +1309,16 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
               </div>
             )}
 
+            {currentUserType === 'dept' && !canPostDepartmentUpdate && (
+              <div className="p-4 rounded-2xl border border-amber-100 bg-amber-50">
+                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+                  Only the assigned department can post updates for this issue.
+                </p>
+              </div>
+            )}
+
             <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              {(currentUserType === 'admin' || currentUserType === 'dept') && (
+              {currentUserType === 'dept' && (
                 <div>
                   <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Take Action</h4>
                   <select 
@@ -1112,6 +1330,14 @@ const IssueDetailModal = ({ issue, onClose, updateStatus, deleteIssue, currentUs
                     <option value="IN_PROGRESS">Set to In Progress</option>
                     <option value="RESOLVED">Resolve Issue</option>
                   </select>
+                </div>
+              )}
+              {currentUserType === 'admin' && (
+                <div>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Status</h4>
+                  <div className="w-full sm:w-auto px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 font-bold text-xs">
+                    {issue.status}
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-2 ml-auto">
@@ -1160,6 +1386,7 @@ const AdminView = ({
   setFilterDepartment,
   sortOption,
   setSortOption,
+  currentUserType,
   dashboardTitle = 'Management Console',
   dashboardSubtitle = 'Resolution tracking for Vellore Smart City'
 }) => (
@@ -1222,10 +1449,30 @@ const AdminView = ({
             </thead>
             <tbody className="divide-y divide-slate-50">
               {issues.map(issue => (
+                (() => {
+                  const issueCreatedAt = new Date(issue.created_at || 0);
+                  const issueAgeInDays = (Date.now() - issueCreatedAt.getTime()) / (1000 * 60 * 60 * 24);
+                  const isOverdue =
+                    currentUserType === 'admin' &&
+                    issueAgeInDays > 7 &&
+                    (issue.status === 'OPEN' || issue.status === 'IN_PROGRESS');
+                  
+                  const needsDeptApproval = 
+                    currentUserType === 'admin' &&
+                    issue.department === 'Others' &&
+                    !issue.ai_department_approved;
+
+                  return (
                 <tr 
                   key={issue.report_group_id || issue.id} 
                   onClick={() => onIssueClick(issue)}
-                  className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                  className={`transition-colors group cursor-pointer ${
+                    needsDeptApproval
+                      ? 'bg-amber-50/70 hover:bg-amber-100 border-l-4 border-amber-500'
+                      : isOverdue
+                      ? 'bg-red-50/70 hover:bg-red-100 border-l-4 border-red-500'
+                      : 'hover:bg-slate-50'
+                  }`}
                 >
                   <td className="px-8 py-6">
                     <div className="flex items-center gap-5">
@@ -1243,6 +1490,16 @@ const AdminView = ({
                           <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-slate-100 text-slate-700 border border-slate-200">
                             {getDisplayId(issue.report_group_id, issue.id)}
                           </span>
+                          {isOverdue && (
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-red-100 text-red-700 border border-red-200 uppercase tracking-wider">
+                              Overdue 7+ days
+                            </span>
+                          )}
+                          {needsDeptApproval && (
+                            <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wider">
+                              Needs Dept Approval
+                            </span>
+                          )}
                           {(issue.reportCount || 1) > 1 && (
                             <span className="inline-flex px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100">
                               {issue.reportCount} reports
@@ -1263,6 +1520,20 @@ const AdminView = ({
                           )}
                         </div>
                         <div className="text-xs text-slate-400 font-medium truncate max-w-[200px] mt-0.5">{issue.description}</div>
+                        {(issue.ai_category || issue.ai_priority) && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {issue.ai_category && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-indigo-50 text-indigo-700 border border-indigo-100 uppercase tracking-wider">
+                                {issue.ai_category}
+                              </span>
+                            )}
+                            {issue.ai_priority && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wider">
+                                {issue.ai_priority}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {analysisMap[issue.id] && (
                           <div className="mt-2 p-2 bg-indigo-50 rounded-xl border border-indigo-100 text-[10px] font-bold text-indigo-700 max-w-[250px] animate-in slide-in-from-top-1 duration-300">
                             ✨ {analysisMap[issue.id]}
@@ -1288,6 +1559,8 @@ const AdminView = ({
                     </div>
                   </td>
                 </tr>
+                  );
+                })()
               ))}
             </tbody>
           </table>
@@ -1478,6 +1751,11 @@ export default function App() {
   };
 
   const updateStatus = async (id, newStatus) => {
+    if (authType !== 'dept') {
+      showNotification('Admin can only view issue status', 'error');
+      return;
+    }
+
     try {
       await axios.put(`${API_BASE}/issues/${id}`, 
         { status: newStatus },
@@ -1546,9 +1824,22 @@ export default function App() {
   };
 
   const addIssueUpdate = (issueId, text) => {
-    const author = authType === 'admin'
-      ? 'Central Admin'
-      : (currentDept ? currentDept.name : 'Department Staff');
+    if (authType !== 'dept' || !currentDept) {
+      showNotification('Only the assigned department can post updates', 'error');
+      return;
+    }
+
+    const matchingIssue = issues.find((issue) => {
+      const issueKey = issue.report_group_id || issue.id;
+      return String(issueKey) === String(issueId);
+    });
+
+    if (!matchingIssue || matchingIssue.department !== currentDept.name) {
+      showNotification('You can only post updates for your own department issues', 'error');
+      return;
+    }
+
+    const author = currentDept.name;
 
     const newUpdate = {
       text,
@@ -1717,6 +2008,7 @@ export default function App() {
             setFilterDepartment={setFilterDepartment}
             sortOption={sortOption}
             setSortOption={setSortOption}
+            currentUserType={authType}
             dashboardTitle="Management Console"
             dashboardSubtitle="Resolution tracking for Vellore Smart City"
           />
@@ -1739,11 +2031,19 @@ export default function App() {
             setFilterDepartment={setFilterDepartment}
             sortOption={sortOption}
             setSortOption={setSortOption}
+            currentUserType={authType}
             dashboardTitle={`${currentDept ? currentDept.name : 'Department'} Console`}
             dashboardSubtitle="Manage and update issues assigned to your department"
           />
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="w-full bg-slate-900 text-center py-6 border-t border-slate-700">
+        <p className="text-slate-300 text-sm font-semibold tracking-wide">
+          SmartVellore © 2026. Built by <span className="font-bold text-white">MDP Team</span>.
+        </p>
+      </footer>
 
       {selectedIssueGroup && (
         <IssueDetailModal 
@@ -1752,6 +2052,7 @@ export default function App() {
           updateStatus={updateStatus} 
           deleteIssue={deleteIssue}
           currentUserType={authType}
+          currentDept={currentDept}
           issueUpdates={issueUpdatesMap[selectedIssueGroup.report_group_id || selectedIssueGroup.id] || []}
           onAddUpdate={addIssueUpdate}
         />

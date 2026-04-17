@@ -9,10 +9,23 @@ load_dotenv(dotenv_path=env_file)
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "postgresql://smartvellore_db_user:MyiU3iCQCW2wBpwYQiDreV6WnQB8wrUK@dpg-d6fidp8gjchc73a5lod0-a/smartvellore_db"
-    SECRET_KEY: str = "supersecretkey"
+    ENVIRONMENT: str = "development"
+    DATABASE_URL: str = ""
+    SQLITE_DATABASE_URL: str = "sqlite:///./smartvellore.db"
+    SECRET_KEY: str = "change-me-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    CORS_ORIGINS: str = "http://localhost:3000,http://127.0.0.1:3000"
+    ADMIN_USERNAME: str = ""
+    ADMIN_PASSWORD: str = ""
+
+    # Gemini AI Configuration
+    GEMINI_ENABLED: bool = False
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_TIMEOUT_SECONDS: int = 20
+    GEMINI_PHASE: int = 1
+    AI_TRIAGE_ON_CREATE: bool = True
     
     # Email Configuration
     SMTP_SERVER: str = "smtp.gmail.com"
@@ -25,6 +38,19 @@ class Settings(BaseSettings):
         env_file = str(env_file)
         env_file_encoding = "utf-8"
         case_sensitive = False
+
+    @property
+    def resolved_database_url(self) -> str:
+        if self.ENVIRONMENT.lower() == "production":
+            if not self.DATABASE_URL:
+                raise ValueError("DATABASE_URL must be set in production")
+            return self.DATABASE_URL
+
+        return self.DATABASE_URL or self.SQLITE_DATABASE_URL
+
+    @property
+    def allowed_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 settings = Settings()

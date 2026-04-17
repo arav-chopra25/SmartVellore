@@ -2,17 +2,17 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Optional
-import os
 from datetime import datetime
+from app.config import settings
 
 
 class EmailService:
     def __init__(self):
-        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_username = os.getenv("SMTP_USERNAME", "")
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.sender_email = os.getenv("SENDER_EMAIL", self.smtp_username)
+        self.smtp_server = settings.SMTP_SERVER or "smtp.gmail.com"
+        self.smtp_port = settings.SMTP_PORT
+        self.smtp_username = settings.SMTP_USERNAME
+        self.smtp_password = settings.SMTP_PASSWORD
+        self.sender_email = settings.SENDER_EMAIL or self.smtp_username
         self.enabled = bool(self.smtp_username and self.smtp_password)
 
     def send_issue_confirmation(

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
 from datetime import datetime
 from .database import Base
 
@@ -15,6 +15,13 @@ class Issue(Base):
     latitude = Column(Float)
     longitude = Column(Float)
     status = Column(String, default="OPEN")
+    ai_category = Column(String)
+    ai_priority = Column(String)
+    ai_department_suggestion = Column(String)
+    ai_department_approved = Column(Boolean, default=False)
+    ai_confidence = Column(Float)
+    ai_summary = Column(String)
+    ai_phase = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

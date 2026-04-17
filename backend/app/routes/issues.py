@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app import models, schemas
@@ -9,6 +9,8 @@ import os
 from geopy.distance import geodesic
 from datetime import datetime
 from app.services.email_service import email_service
+from app.services.ai_service import triage_issue
+from app.rate_limit import limiter
 
 router = APIRouter(prefix="/issues", tags=["Issues"])
 GROUP_DISTANCE_METERS = 75
@@ -95,7 +97,9 @@ def get_all_issues(db: Session = Depends(get_db)):
 # Create Issue
 # ---------------------------
 @router.post("")
+@limiter.limit("20/minute")
 def create_issue(
+    request: Request,
     title: str = Form(...),
     email: str = Form(...),
     department: str = Form(...),
@@ -114,6 +118,25 @@ def create_issue(
         with open(image_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
 
+    ai_result = {
+        "category": None,
+        "priority": None,
+        "department_suggestion": None,
+        "confidence": None,
+        "summary": None,
+        "phase": None,
+    }
+
+    if settings.AI_TRIAGE_ON_CREATE:
+        try:
+            ai_result = triage_issue(
+                title=title,
+                description=description,
+                citizen_department=department,
+            )
+        except Exception as exc:
+            print(f"AI triage warning: {exc}")
+
     new_issue = models.Issue(
         report_group_id=report_group_id,
         title=title,
@@ -123,7 +146,14 @@ def create_issue(
         latitude=latitude,
         longitude=longitude,
         image_path=image_path,
-        status="OPEN"
+        status="OPEN",
+        ai_category=ai_result.get("category"),
+        ai_priority=ai_result.get("priority"),
+        ai_department_suggestion=ai_result.get("department_suggestion"),
+        ai_department_approved=(department != "Others"),  # Requires approval only if "Others"
+        ai_confidence=ai_result.get("confidence"),
+        ai_summary=ai_result.get("summary"),
+        ai_phase=ai_result.get("phase"),
     )
 
     db.add(new_issue)
@@ -157,7 +187,9 @@ def create_issue(
 # Update Status (Admin Only)
 # ---------------------------
 @router.put("/{issue_id}")
+@limiter.limit("30/minute")
 def update_issue_status(
+    request: Request,
     issue_id: int,
     status: schemas.IssueStatusUpdate,
     db: Session = Depends(get_db),
