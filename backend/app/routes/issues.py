@@ -57,13 +57,21 @@ def get_next_group_number(db: Session) -> int:
     return next_number
 
 
-def resolve_report_group_id(db: Session, latitude: float, longitude: float):
+def resolve_report_group_id(db: Session, latitude: float, longitude: float, department: str):
+    """
+    Find a group for this issue based on proximity AND same department.
+    Only groups issues that are within 75 meters AND have the same department.
+    """
     nearest_issue = None
     nearest_distance = None
 
     existing_issues = db.query(models.Issue).all()
     for issue in existing_issues:
         if issue.latitude is None or issue.longitude is None:
+            continue
+
+        # Only consider issues from the SAME department
+        if issue.department != department:
             continue
 
         distance_meters = geodesic((latitude, longitude), (issue.latitude, issue.longitude)).meters
@@ -110,7 +118,7 @@ def create_issue(
     db: Session = Depends(get_db),
 ):
     image_path = None
-    report_group_id = resolve_report_group_id(db, latitude, longitude)
+    report_group_id = resolve_report_group_id(db, latitude, longitude, department)
 
     if image:
         os.makedirs("uploads", exist_ok=True)
