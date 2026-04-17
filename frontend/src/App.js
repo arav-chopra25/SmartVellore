@@ -1987,10 +1987,10 @@ export default function App() {
   const groupedDepartmentIssues = buildGroupedIssueCards(departmentScopedIssues);
 
   return (
-    <div className="min-h-screen bg-[#FDFEFF] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-700">
+    <div className="min-h-screen bg-[#FDFEFF] font-sans text-slate-900 selection:bg-blue-100 selection:text-blue-700 flex flex-col">
       <Navbar setView={setView} view={view} authType={authType} handleLogout={handleLogout} />
       
-      <main>
+      <main className="flex-1">
         {view === 'user' && (
           <UserView 
             formData={formData} 
