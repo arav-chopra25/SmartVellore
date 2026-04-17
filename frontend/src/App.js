@@ -1912,11 +1912,11 @@ export default function App() {
     });
 
   const buildGroupedIssueCards = (issueList) => {
+    // Group by report_group_id AND department to ensure same department grouping
     const groupedMap = issueList.reduce((accumulator, issue) => {
-      // Only group reports that have the same CLT group ID
-      // Single reports (with null report_group_id) each get their own unique key
       const groupId = convertLegacyGroupId(issue.report_group_id, issue.id);
-      const key = groupId || `single-${issue.id}`;
+      // Create a composite key: groupId + department (so different departments are separate)
+      const key = groupId ? `${groupId}||${issue.department}` : `single-${issue.id}`;
       
       if (!accumulator[key]) {
         accumulator[key] = [];
@@ -1925,13 +1925,18 @@ export default function App() {
       return accumulator;
     }, {});
 
-    const cards = Object.entries(groupedMap).map(([groupId, groupedReports]) => {
+    const cards = Object.entries(groupedMap).map(([compositeKey, groupedReports]) => {
       const sortedReports = [...groupedReports].sort(
         (left, right) => new Date(left.created_at || 0).getTime() - new Date(right.created_at || 0).getTime()
       );
       const topReport = sortedReports[0];
       
-      // For single reports, keep report_group_id as null; for grouped, use the CLT ID
+      // Extract original groupId from composite key (if it has department separator)
+      const groupId = compositeKey.includes('||') 
+        ? compositeKey.split('||')[0] 
+        : null;
+      
+      // For single reports, keep report_group_id as null; for grouped same-department, use the original CLT ID
       const finalGroupId = groupedReports.length === 1 ? null : groupId;
       
       return {
