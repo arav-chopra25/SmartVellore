@@ -954,6 +954,16 @@ const UserView = ({
                         {issue.reportCount} Reports
                       </span>
                     )}
+                    {issue.ai_priority && (
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black border ${
+                        issue.ai_priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-100' :
+                        issue.ai_priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                        issue.ai_priority === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                        'bg-green-50 text-green-700 border-green-100'
+                      }`}>
+                        {issue.ai_priority}
+                      </span>
+                    )}
                   </div>
                   {issue.department && (
                     <div className="inline-flex mb-2 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
@@ -1528,7 +1538,12 @@ const AdminView = ({
                               </span>
                             )}
                             {issue.ai_priority && (
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-rose-50 text-rose-700 border border-rose-100 uppercase tracking-wider">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                issue.ai_priority === 'CRITICAL' ? 'bg-red-50 text-red-700 border-red-100' :
+                                issue.ai_priority === 'HIGH' ? 'bg-orange-50 text-orange-700 border-orange-100' :
+                                issue.ai_priority === 'MEDIUM' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                'bg-green-50 text-green-700 border-green-100'
+                              }`}>
                                 {issue.ai_priority}
                               </span>
                             )}
@@ -1867,15 +1882,21 @@ export default function App() {
       }
 
       if (sortOption === SORT_OPTIONS.PRIORITY) {
+        // Priority ranking: CRITICAL > HIGH > MEDIUM > LOW
         const priorityRank = {
-          OPEN: 3,
-          IN_PROGRESS: 2,
-          RESOLVED: 1
+          CRITICAL: 4,
+          HIGH: 3,
+          MEDIUM: 2,
+          LOW: 1
         };
-        const rankA = priorityRank[a.status] || 0;
-        const rankB = priorityRank[b.status] || 0;
+        const rankA = priorityRank[a.ai_priority] || 0;
+        const rankB = priorityRank[b.ai_priority] || 0;
+        
+        // Sort by AI priority in descending order (CRITICAL first, then HIGH, etc.)
         if (rankA !== rankB) return rankB - rankA;
-        return dateB - dateA;
+        
+        // For same priority, show older issues first (7+ days in status come first)
+        return dateA - dateB;
       }
 
       return dateB - dateA;
@@ -1923,11 +1944,21 @@ export default function App() {
       }
 
       if (sortOption === SORT_OPTIONS.PRIORITY) {
-        const priorityRank = { OPEN: 3, IN_PROGRESS: 2, RESOLVED: 1 };
-        const leftRank = Math.max(...left.groupedReports.map(report => priorityRank[report.status] || 0));
-        const rightRank = Math.max(...right.groupedReports.map(report => priorityRank[report.status] || 0));
-        if (leftRank !== rightRank) return rightRank - leftRank;
-        return newestRight - newestLeft;
+        // Priority ranking: CRITICAL > HIGH > MEDIUM > LOW
+        const priorityRank = {
+          CRITICAL: 4,
+          HIGH: 3,
+          MEDIUM: 2,
+          LOW: 1
+        };
+        const leftPriority = Math.max(...left.groupedReports.map(report => priorityRank[report.ai_priority] || 0));
+        const rightPriority = Math.max(...right.groupedReports.map(report => priorityRank[report.ai_priority] || 0));
+        
+        // Sort by AI priority in descending order (CRITICAL first, then HIGH, etc.)
+        if (leftPriority !== rightPriority) return rightPriority - leftPriority;
+        
+        // For same priority, show older issues first (7+ days in status come first)
+        return oldestLeft - oldestRight;
       }
 
       return newestRight - newestLeft;
